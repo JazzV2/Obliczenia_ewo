@@ -1,10 +1,29 @@
-from .target_function import rastrigin_function
-from .data_types import Selection, Point, Population, Bounds
-from .genetic_algorigm import initialize_population, fitness, selection, crossover, mutate
+from .target_function import (
+    RastriginFunction,
+    HypersphereFunction,
+    RosenbrockFunction,
+)
+from .data_types import (
+    FunctionBox,
+    SelectionBox,
+    Point,
+    Population,
+    Bounds,
+)
+from .genetic_algorigm import (
+    initialize_population,
+    fitness,
+    selection,
+    crossover,
+    mutate,
+)
 
 __all__ = [
-    'rastrigin_function',
-    'Selection',
+    'RastriginFunction',
+    'HypersphereFunction',
+    'RosenbrockFunction',
+    'FunctionBox',
+    'SelectionBox',
     'Point',
     'Population',
     'Bounds',

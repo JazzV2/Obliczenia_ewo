@@ -11,14 +11,26 @@ def main() -> None:
     # Sidebar - GA parameters
     with st.sidebar:
         st.header("Genetic Algorithm Parameters")
+        selected_func_type = st.selectbox("Target Function", ca.FunctionBox.values())
         pop_size = st.number_input("Population Size", value=50, min_value=2, max_value=1000)
         epochs = st.number_input("Number of Epochs", value=20, min_value=1, max_value=1000)
-        selection_method = st.selectbox("Selection Method", ca.Selection.values())
+        selection_method = st.selectbox("Selection Method", ca.SelectionBox.values())
         crossover_rate = st.slider("Crossover Rate", min_value=0.0, max_value=1.0, value=0.9)
         mutation_rate = st.slider("Mutation Rate", min_value=0.0, max_value=1.0, value=0.1)
 
         # Button to run the GA
         run_button = st.button("Run")
+
+    st.markdown(f"{selected_func_type} function")
+    match selected_func_type:
+        case ca.FunctionBox.RASTRIGIN.value:
+            func = ca.RastriginFunction()
+        case ca.FunctionBox.HYPERSPHERE.value:
+            func = ca.HypersphereFunction()
+        case ca.FunctionBox.ROSENBROCK.value:
+            func = ca.RosenbrockFunction()
+        case _:
+            raise ValueError(f"Selected invalid function type: {selected_func_type}")
 
     if run_button:
         # Progress bar
@@ -31,7 +43,7 @@ def main() -> None:
         population = ca.initialize_population(pop_size)
         for epoch in range(epochs):
             # Evaluate fitness for each individual
-            scores = [ca.fitness(ind) for ind in population]
+            scores = [ca.fitness(func, ind) for ind in population]
             best_score_epoch = max(scores)
             best_ind_epoch = population[np.argmax(scores)]
 
@@ -64,7 +76,7 @@ def main() -> None:
         x_vals = np.linspace(*ca.Bounds, num=500)
         y_vals = np.linspace(*ca.Bounds, num=500)
         x, y = np.meshgrid(x_vals, y_vals)
-        z = ca.rastrigin_function(x, y)
+        z = func(x, y)
 
         # Plotly figure
         fig = go.Figure(
@@ -83,7 +95,7 @@ def main() -> None:
         # Add scatter points for best individuals each epoch
         xs = [ind[0] for ind in best_individuals_per_epoch]
         ys = [ind[1] for ind in best_individuals_per_epoch]
-        zs = [ca.rastrigin_function(x, y) for x, y in best_individuals_per_epoch]
+        zs = [func(x, y) for x, y in best_individuals_per_epoch]
 
         fig.add_trace(go.Scatter3d(
             x=xs,
@@ -95,20 +107,20 @@ def main() -> None:
                 color='red',
                 symbol='circle'
             ),
-            name='Best per epoch'
+            name='Best individual per epoch'
         ))
 
         fig.add_trace(go.Scatter3d(
-            x=[xs[-1]],
-            y=[ys[-1]],
-            z=[zs[-1]],
+            x=[func.global_minimum()[0]],
+            y=[func.global_minimum()[1]],
+            z=[func(*func.global_minimum())],
             mode='markers',
             marker=dict(
                 size=10,
                 color='blue',
                 symbol='circle'
             ),
-            name='Best Overall'
+            name='Global minimum'
         ))
 
         fig.update_layout(
@@ -128,7 +140,7 @@ def main() -> None:
         # Display best overall individual
         st.subheader("Best Overall Individual")
         st.write(f"Coordinates (x, y): {best_overall_ind}")
-        st.write(f"Rastrigin Value: {ca.rastrigin_function(*best_overall_ind):.4f}")
+        st.write(f"Rastrigin Value: {func(*best_overall_ind):.4f}")
 
 
 if __name__ == "__main__":

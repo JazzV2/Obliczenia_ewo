@@ -2,8 +2,8 @@ from typing import List, Tuple
 
 import numpy as np
 
-from .target_function import rastrigin_function
-from .data_types import Selection, Point, Population, Bounds
+from .target_function import TargetFunction
+from .data_types import SelectionBox, Point, Population, Bounds
 
 
 def initialize_population(pop_size: int, x_bounds: Point = Bounds, y_bounds: Point = Bounds) -> Population:
@@ -19,23 +19,23 @@ def initialize_population(pop_size: int, x_bounds: Point = Bounds, y_bounds: Poi
     return population
 
 
-def fitness(individual: Point) -> float:
+def fitness(function: TargetFunction, individual: Point) -> float:
     """
-    We aim to MINIMIZE the Rastrigin function,
+    We aim to MINIMIZE the target function,
     so let's define fitness = -f(x,y) for convenience
     (because standard GAs often maximize fitness).
     """
     x, y = individual
-    return -rastrigin_function(x, y)
+    return -function(x, y)
 
 
-def selection(population: Population, scores: List[float], method: Selection = Selection.ROULETTE):
+def selection(population: Population, scores: List[float], method: SelectionBox = SelectionBox.ROULETTE):
     """
     Select an individual from the population based on the method.
     For simplicity, we demonstrate roulette-wheel selection.
     Other methods: tournament, rank, etc.
     """
-    if method == Selection.ROULETTE:
+    if method == SelectionBox.ROULETTE:
         # Normalize scores to create a probability distribution
         total_fitness = sum(scores)
         if total_fitness == 0:
@@ -51,7 +51,7 @@ def selection(population: Population, scores: List[float], method: Selection = S
             if r < cum_prob:
                 return population[i]
 
-    elif method == Selection.TOURNAMENT:
+    elif method == SelectionBox.TOURNAMENT:
         # Simple tournament with 3 participants (example)
         k = 3
         chosen = np.random.choice(len(population), k, replace=False)
