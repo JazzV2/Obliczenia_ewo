@@ -2,10 +2,12 @@ from .target_function import (
     RastriginFunction,
     HypersphereFunction,
     RosenbrockFunction,
+    Styblinski_and_Tang,
 )
 from .data_types import (
     FunctionBox,
     SelectionBox,
+    CrossMethodBox,
     Point,
     Population,
     Bounds,
@@ -22,8 +24,10 @@ __all__ = [
     'RastriginFunction',
     'HypersphereFunction',
     'RosenbrockFunction',
+    'Styblinski_and_Tang',
     'FunctionBox',
     'SelectionBox',
+    'CrossMethodBox',
     'Point',
     'Population',
     'Bounds',

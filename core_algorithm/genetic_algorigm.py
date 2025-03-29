@@ -1,10 +1,44 @@
+from re import match
 from typing import List, Tuple
+import streamlit as st
 
 import numpy as np
+import bitstring
+import random
 
 from .target_function import TargetFunction
-from .data_types import SelectionBox, Point, Population, Bounds
+from .data_types import SelectionBox, Point, Population, Bounds, CrossMethodBox
 
+def point_to_bin(point: Point):
+    x, y = point
+    x_bin = bitstring.BitArray(float=x, length=32).bin
+    y_bin = bitstring.BitArray(float=y, length=32).bin
+
+    pointBin = x_bin + y_bin
+
+    return pointBin
+
+def bin_to_point(pointBin: str):
+    x_bin, y_bin = pointBin[:32], pointBin[32:]
+
+    x = bitstring.BitArray(bin=x_bin).float
+    y = bitstring.BitArray(bin=y_bin).float
+
+    return (x, y)
+
+def two_points_cross(parent1: Point, parent2: Point):
+    parent1_bin = point_to_bin(parent1)
+    parent2_bin = point_to_bin(parent2)
+
+    a, b = sorted(random.sample(range(1, len(parent1_bin) - 1), 2))
+
+    children1_bin = parent1_bin[:a] + parent2_bin[a:b] + parent1_bin[b:]
+    children2_bin = parent2_bin[:a] + parent1_bin[a:b] + parent2_bin[b:]
+
+    children1 = bin_to_point(children1_bin)
+    children2 = bin_to_point(children2_bin)
+
+    return children1, children2
 
 def initialize_population(pop_size: int, x_bounds: Point = Bounds, y_bounds: Point = Bounds) -> Population:
     """
@@ -29,13 +63,13 @@ def fitness(function: TargetFunction, individual: Point) -> float:
     return -function(x, y)
 
 
-def selection(population: Population, scores: List[float], method: SelectionBox = SelectionBox.ROULETTE):
+def selection(population: Population, scores: List[float], method: SelectionBox = str(SelectionBox.ROULETTE)):
     """
     Select an individual from the population based on the method.
     For simplicity, we demonstrate roulette-wheel selection.
     Other methods: tournament, rank, etc.
     """
-    if method == SelectionBox.ROULETTE:
+    if method == str(SelectionBox.ROULETTE):
         # Normalize scores to create a probability distribution
         total_fitness = sum(scores)
         if total_fitness == 0:
@@ -51,34 +85,48 @@ def selection(population: Population, scores: List[float], method: SelectionBox 
             if r < cum_prob:
                 return population[i]
 
-    elif method == SelectionBox.TOURNAMENT:
+    elif method == str(SelectionBox.TOURNAMENT):
         # Simple tournament with 3 participants (example)
         k = 3
         chosen = np.random.choice(len(population), k, replace=False)
         selected = max(chosen, key=lambda idx: scores[idx])
         return population[selected]
-
+    
+    elif method == str(SelectionBox.THEBEST):
+        population_indexes = np.arange(0, len(population))
+        selected = max(population_indexes, key=lambda idx: scores[idx])
+        return population[selected]
+        
     else:
         # Default random
         return population[np.random.randint(len(population))]
 
 
-def crossover(parent1: Point, parent2: Point, crossover_rate: float = 0.9) -> Tuple[Point, Point]:
+def crossover(parent1: Point, parent2: Point, crossover_rate: float = 0.9, method: CrossMethodBox = str(CrossMethodBox.ONEPOINT)) -> Tuple[Point, Point]:
     """
     Single-point crossover on 2D chromosome (x,y).
     You could also do two-point or uniform crossover.
     """
+    
     if np.random.rand() < crossover_rate:
+        if method == str(CrossMethodBox.ONEPOINT):
         # Example: crossover on x or y with 50% probability
-        if np.random.rand() < 0.5:
-            # Swap x
-            child1 = (parent2[0], parent1[1])
-            child2 = (parent1[0], parent2[1])
-        else:
-            # Swap y
-            child1 = (parent1[0], parent2[1])
-            child2 = (parent2[0], parent1[1])
-        return child1, child2
+            if np.random.rand() < 0.5:
+                # Swap x
+                child1 = (parent2[0], parent1[1])
+                child2 = (parent1[0], parent2[1])
+
+            else:
+                # Swap y
+                child1 = (parent1[0], parent2[1])
+                child2 = (parent2[0], parent1[1])
+            return child1, child2
+        
+        elif method == str(CrossMethodBox.TWOPOINTS):
+            print(parent1, parent2)
+            child1, child2 = two_points_cross(parent1, parent2)
+            print(child1, child2)
+            return child1, child2
     else:
         # No crossover -> just copy parents
         return parent1, parent2

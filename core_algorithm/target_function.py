@@ -48,3 +48,13 @@ class RosenbrockFunction(TargetFunction):
 
     def global_minimum(self) -> Point:
         return 1.0, 1.0
+
+class Styblinski_and_Tang(TargetFunction):
+    # f(x)=0.5\sum_{i=0}^{N-1}(x_i^4-16x_i^2+x_i)
+    # (-78.3323314075428, [-2.903534, -2.903534])
+
+    def __call__(self, x: float | np.ndarray, y: float | np.ndarray) -> float | np.ndarray:
+        return 0.5 * ((x ** 4 - 16 * x ** 2 + x) + (y ** 4 - 16 * y ** 2 + y))
+
+    def global_minimum(self) -> Point:
+        return -2.903534, -2.903534
