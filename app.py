@@ -1,52 +1,59 @@
+import os
+
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+import pandas as pd
 
 import core_algorithm as ca
 
 
 def main() -> None:
-    st.title("Genetic Algorithm Demo on a 2D Function")
+    st.set_page_config(
+        page_title="Genetic Algorithm App",
+        page_icon=":guardsman:",
+    )
+    st.title(f"Genetic Algorithm on a 2D Function")
 
-    # Sidebar - GA parameters
+    # sidebar - GA parameters
     with st.sidebar:
-        st.header("Genetic Algorithm Parameters")
+        st.header("Select Parameters")
         selected_func_type = st.selectbox("Target Function", ca.FunctionBox.values())
-        pop_size = st.number_input("Population Size", value=50, min_value=2, max_value=1000)
-        epochs = st.number_input("Number of Epochs", value=20, min_value=1, max_value=1000)
+        pop_size = st.number_input("Population Size", value=100, min_value=10, max_value=2000, step=10)
+        epochs = st.number_input("Number of Epochs", value=20, min_value=1, max_value=500, step=1)
         selection_method = st.selectbox("Selection Method", ca.SelectionBox.values())
-        cross_method = st.selectbox("Cross method", ca.CrossMethodBox.values())
-        mutation_method = st.selectbox("Mutation method", ca.MutationMethodBox.values())
-        crossover_rate = st.slider("Crossover Rate", min_value=0.0, max_value=1.0, value=0.9)
-        mutation_rate = st.slider("Mutation Rate", min_value=0.0, max_value=1.0, value=0.1)
+        crossover_method = st.selectbox("Crossover Method", ca.CrossMethodBox.values())
+        crossover_rate = st.slider("Crossover Rate", min_value=0.0, max_value=1.0, value=0.9, step=0.05)
+        mutation_method = st.selectbox("Mutation Method", ca.MutationMethodBox.values())
+        mutation_rate = st.slider("Mutation Rate", min_value=0.0, max_value=1.0, value=0.1, step=0.05)
 
-        # Button to run the GA
+        # button to run the GA
         run_button = st.button("Run")
-
-    st.markdown(f"{selected_func_type} function")
+    
+    
     match selected_func_type:
-        case ca.FunctionBox.RASTRIGIN.value:
+        case ca.FunctionBox.RASTRIGIN:
             func = ca.RastriginFunction()
-        case ca.FunctionBox.HYPERSPHERE.value:
+        case ca.FunctionBox.HYPERSPHERE:
             func = ca.HypersphereFunction()
-        case ca.FunctionBox.ROSENBROCK.value:
+        case ca.FunctionBox.ROSENBROCK:
             func = ca.RosenbrockFunction()
-        case ca.FunctionBox.Styblinski_and_Tang.value:
+        case ca.FunctionBox.Styblinski_and_Tang:
             func = ca.Styblinski_and_Tang()
         case _:
             raise ValueError(f"Selected invalid function type: {selected_func_type}")
 
     if run_button:
-        # Progress bar
+        # progress bar
         progress_bar = st.progress(0)
 
         best_individuals_per_epoch = []
         best_scores_per_epoch = []
 
-        # Run the GA with a manual loop so we can update progress
+        # run GA with a manual loop so we can update progress
         population = ca.initialize_population(pop_size)
         for epoch in range(epochs):
-            # Evaluate fitness for each individual
+            # evaluate fitness for each individual
             scores = [ca.fitness(func, ind) for ind in population]
             best_score_epoch = max(scores)
             best_ind_epoch = population[np.argmax(scores)]
@@ -54,14 +61,14 @@ def main() -> None:
             best_individuals_per_epoch.append(best_ind_epoch)
             best_scores_per_epoch.append(best_score_epoch)
 
-            # Create new population
+            # create new population
             new_population = []
             while len(new_population) < pop_size:
                 parent1 = ca.selection(population, scores, method=selection_method)
                 parent2 = ca.selection(population, scores, method=selection_method)
-                cross_result = ca.crossover(parent1, parent2, crossover_rate, cross_method)
+                cross_result = ca.crossover(parent1, parent2, crossover_rate, crossover_method)
                 
-                if cross_method == str(ca.CrossMethodBox.GRAIN):
+                if crossover_method == ca.CrossMethodBox.GRAIN:
                     child1 = cross_result
                     child1 = ca.mutate(child1, mutation_method, mutation_rate)
                     new_population.extend([child1])
@@ -73,23 +80,20 @@ def main() -> None:
 
             population = new_population[:pop_size]
             
-            # Update progress bar
             progress_bar.progress(int((epoch + 1) / epochs * 100))
         
-        # After GA completes
-        progress_bar.empty()  # remove progress bar
+        # # remove progress bar after GA completes
+        progress_bar.empty()  
 
         # Compute overall best
         best_overall_ind = best_individuals_per_epoch[np.argmax(best_scores_per_epoch)]
 
-        # Prepare data for 3D Plot
-        # We'll generate a grid of x,y points and compute Rastrigin for the surface
+        # generate 3D Plot
         x_vals = np.linspace(*ca.Bounds, num=500)
         y_vals = np.linspace(*ca.Bounds, num=500)
         x, y = np.meshgrid(x_vals, y_vals)
         z = func(x, y)
 
-        # Plotly figure
         fig = go.Figure(
             data=[
                 go.Surface(
@@ -98,27 +102,22 @@ def main() -> None:
                     z=z,
                     colorscale='Viridis',
                     opacity=0.7,
-                    name='Rastrigin Surface'
+                    name='Func Surface'
                 ),
-            ]
+            ],
         )
 
-        # Add scatter points for best individuals each epoch
-        xs = [ind[0] for ind in best_individuals_per_epoch]
-        ys = [ind[1] for ind in best_individuals_per_epoch]
-        zs = [func(x, y) for x, y in best_individuals_per_epoch]
-
         fig.add_trace(go.Scatter3d(
-            x=xs,
-            y=ys,
-            z=zs,
+            x=[ind[0] for ind in best_individuals_per_epoch],
+            y=[ind[1] for ind in best_individuals_per_epoch],
+            z=[func(x, y) for x, y in best_individuals_per_epoch],
             mode='markers+lines',
             marker=dict(
                 size=5,
                 color='red',
                 symbol='circle'
             ),
-            name='Best individual per epoch'
+            name='Best per epoch'
         ))
 
         fig.add_trace(go.Scatter3d(
@@ -131,11 +130,24 @@ def main() -> None:
                 color='blue',
                 symbol='circle'
             ),
-            name='Global minimum'
+            name='Global minimum',
+        ))
+
+        fig.add_trace(go.Scatter3d(
+            x=[best_overall_ind[0]],
+            y=[best_overall_ind[1]],
+            z=[func(*best_overall_ind)],
+            mode='markers',
+            marker=dict(
+                size=8,
+                color='green',
+                symbol='circle'
+            ),
+            name='Found minimum',
         ))
 
         fig.update_layout(
-            title="Rastrigin Function Optimization with GA",
+            title=f"Genetic Algorithm path on {selected_func_type} function",
             scene=dict(
                 xaxis=dict(
                     range=[ca.Bounds[0], ca.Bounds[1]],  # Zakres dla osi X
@@ -152,16 +164,45 @@ def main() -> None:
             ),
             width=700,
             height=700,
+            legend=dict(
+                orientation="h",  # horizontal legend
+                yanchor="bottom",
+                y=1.02,  # Position above the plot
+                xanchor="center",
+                x=0.5,  # Centered horizontally
+                bgcolor="rgba(255,255,255,0.8)"  # Semi-transparent background
+            )
         )
 
-        # Display the plot
+        # Store results in session state
+        st.session_state.report_df = pd.DataFrame(
+            {
+                "Epoch": range(1, epochs + 1),
+                "Best Individual (X)": [ind[0] for ind in best_individuals_per_epoch],
+                "Best Individual (Y)": [ind[1] for ind in best_individuals_per_epoch],
+                "Best Score": best_scores_per_epoch,
+            }
+        )
+
+        st.write("Best Overall Individual:")
+        st.write(f'len: {best_individuals_per_epoch}')
+        st.header(f"f(x, y) = ({best_overall_ind[0]:.3f}, {best_overall_ind[1]:.3f}) = {func(*best_overall_ind):.6f}")
+        
         st.plotly_chart(fig, use_container_width=True)
 
-        # Display best overall individual
-        st.subheader("Best Overall Individual")
-        st.write(f"Coordinates (x, y): {best_overall_ind}")
-        st.write(f"Rastrigin Value: {func(*best_overall_ind):.4f}")
 
+    if 'report_df' in st.session_state:
+        if not os.path.exists("reports"):
+            os.mkdir("reports")
 
+        generate_report = st.button("Generate Report")
+        if generate_report:
+            st.session_state.report_df.to_csv(
+                f"reports/func{selected_func_type}_epoch{epochs}_population{pop_size}.csv", 
+                index=False
+            )
+            st.success("Report generated successfully!")
+    
+    
 if __name__ == "__main__":
     main()

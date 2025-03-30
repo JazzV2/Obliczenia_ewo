@@ -21,6 +21,7 @@ from .genetic_algorigm import (
     mutate,
 )
 
+
 __all__ = [
     'RastriginFunction',
     'HypersphereFunction',
@@ -38,5 +39,4 @@ __all__ = [
     'selection',
     'crossover',
     'mutate',
-    # 'run',
 ]

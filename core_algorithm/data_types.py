@@ -15,7 +15,7 @@ class StreamlitEnum(Enum):
 
     @classmethod
     def values(cls) -> list:
-        return [s.value for s in cls]
+        return [s for s in cls]
 
 
 @unique
@@ -31,7 +31,7 @@ class SelectionBox(StreamlitEnum):
     ROULETTE = 'roulette'
     TOURNAMENT = 'tournament'
     THEBEST = 'the best'
-    # TODO: add more selection methods
+
 
 @unique
 class CrossMethodBox(StreamlitEnum):
@@ -40,6 +40,8 @@ class CrossMethodBox(StreamlitEnum):
     HOMOGENEOUS = 'Homogeneous'
     GRAIN = 'Grain'
 
+
+@unique
 class MutationMethodBox(StreamlitEnum):
     EDGE = 'Edge'
     ONEPOINT = 'One point'
