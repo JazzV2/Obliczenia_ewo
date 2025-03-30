@@ -185,7 +185,6 @@ def main() -> None:
         )
 
         st.write("Best Overall Individual:")
-        st.write(f'len: {best_individuals_per_epoch}')
         st.header(f"f(x, y) = ({best_overall_ind[0]:.3f}, {best_overall_ind[1]:.3f}) = {func(*best_overall_ind):.6f}")
         
         st.plotly_chart(fig, use_container_width=True)
@@ -203,6 +202,6 @@ def main() -> None:
             )
             st.success("Report generated successfully!")
     
-    
+
 if __name__ == "__main__":
     main()
