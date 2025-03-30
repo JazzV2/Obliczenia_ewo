@@ -15,6 +15,8 @@ def main() -> None:
         pop_size = st.number_input("Population Size", value=50, min_value=2, max_value=1000)
         epochs = st.number_input("Number of Epochs", value=20, min_value=1, max_value=1000)
         selection_method = st.selectbox("Selection Method", ca.SelectionBox.values())
+        cross_method = st.selectbox("Cross method", ca.CrossMethodBox.values())
+        mutation_method = st.selectbox("Mutation method", ca.MutationMethodBox.values())
         crossover_rate = st.slider("Crossover Rate", min_value=0.0, max_value=1.0, value=0.9)
         mutation_rate = st.slider("Mutation Rate", min_value=0.0, max_value=1.0, value=0.1)
 
@@ -29,6 +31,8 @@ def main() -> None:
             func = ca.HypersphereFunction()
         case ca.FunctionBox.ROSENBROCK.value:
             func = ca.RosenbrockFunction()
+        case ca.FunctionBox.Styblinski_and_Tang.value:
+            func = ca.Styblinski_and_Tang()
         case _:
             raise ValueError(f"Selected invalid function type: {selected_func_type}")
 
@@ -55,10 +59,17 @@ def main() -> None:
             while len(new_population) < pop_size:
                 parent1 = ca.selection(population, scores, method=selection_method)
                 parent2 = ca.selection(population, scores, method=selection_method)
-                child1, child2 = ca.crossover(parent1, parent2, crossover_rate)
-                child1 = ca.mutate(child1, mutation_rate)
-                child2 = ca.mutate(child2, mutation_rate)
-                new_population.extend([child1, child2])
+                cross_result = ca.crossover(parent1, parent2, crossover_rate, cross_method)
+                
+                if cross_method == str(ca.CrossMethodBox.GRAIN):
+                    child1 = cross_result
+                    child1 = ca.mutate(child1, mutation_method, mutation_rate)
+                    new_population.extend([child1])
+                else:
+                    child1, child2 = cross_result
+                    child1 = ca.mutate(child1, mutation_method, mutation_rate)
+                    child2 = ca.mutate(child2, mutation_method, mutation_rate)
+                    new_population.extend([child1, child2])
 
             population = new_population[:pop_size]
             
@@ -126,12 +137,21 @@ def main() -> None:
         fig.update_layout(
             title="Rastrigin Function Optimization with GA",
             scene=dict(
-                xaxis_title='X',
-                yaxis_title='Y',
-                zaxis_title='f(X,Y)'
+                xaxis=dict(
+                    range=[ca.Bounds[0], ca.Bounds[1]],  # Zakres dla osi X
+                    title="X",
+                ),
+                yaxis=dict(
+                    range=[ca.Bounds[0], ca.Bounds[1]],  # Zakres dla osi Y
+                    title="Y",
+                ),
+                zaxis=dict(
+                    range=[round(z.min()) - 1, round(z.max()) + 1],  # Zakres dla osi Z
+                    title="f(X,Y)",
+                ),
             ),
             width=700,
-            height=700
+            height=700,
         )
 
         # Display the plot

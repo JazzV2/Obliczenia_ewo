@@ -23,10 +23,25 @@ class FunctionBox(StreamlitEnum):
     RASTRIGIN = 'Rastrigin'
     HYPERSPHERE = 'Hypersphere'
     ROSENBROCK = 'Rosenbrock'
+    Styblinski_and_Tang = "Styblinski and Tang"
 
 
 @unique
 class SelectionBox(StreamlitEnum):
     ROULETTE = 'roulette'
     TOURNAMENT = 'tournament'
+    THEBEST = 'the best'
     # TODO: add more selection methods
+
+@unique
+class CrossMethodBox(StreamlitEnum):
+    ONEPOINT = 'One point'
+    TWOPOINTS = 'Two points'
+    HOMOGENEOUS = 'Homogeneous'
+    GRAIN = 'Grain'
+
+class MutationMethodBox(StreamlitEnum):
+    EDGE = 'Edge'
+    ONEPOINT = 'One point'
+    TWOPOINTS = 'Two points'
+    INVERSION = 'Inversion'
