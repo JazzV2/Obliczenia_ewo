@@ -37,4 +37,11 @@ class SelectionBox(StreamlitEnum):
 class CrossMethodBox(StreamlitEnum):
     ONEPOINT = 'One point'
     TWOPOINTS = 'Two points'
-    HOMOGENEOUSGRANULAR = 'Homogeneous granular'
+    HOMOGENEOUS = 'Homogeneous'
+    GRAIN = 'Grain'
+
+class MutationMethodBox(StreamlitEnum):
+    EDGE = 'Edge'
+    ONEPOINT = 'One point'
+    TWOPOINTS = 'Two points'
+    INVERSION = 'Inversion'

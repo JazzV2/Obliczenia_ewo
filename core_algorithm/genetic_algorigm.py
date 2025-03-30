@@ -1,4 +1,4 @@
-from re import match
+import math
 from typing import List, Tuple
 import streamlit as st
 
@@ -7,7 +7,7 @@ import bitstring
 import random
 
 from .target_function import TargetFunction
-from .data_types import SelectionBox, Point, Population, Bounds, CrossMethodBox
+from .data_types import MutationMethodBox, SelectionBox, Point, Population, Bounds, CrossMethodBox
 
 def point_to_bin(point: Point):
     x, y = point
@@ -26,19 +26,143 @@ def bin_to_point(pointBin: str):
 
     return (x, y)
 
+def one_point_cross(parent1: Point, parent2: Point):
+    parent1_bin = point_to_bin(parent1)
+    parent2_bin = point_to_bin(parent2)
+
+    while(True):
+        a = random.sample(range(1, len(parent1_bin) - 1), 1)[0]
+
+        children1_bin = parent1_bin[:a] + parent2_bin[a:]
+        children2_bin = parent2_bin[:a] + parent1_bin[a:]
+
+        children1 = bin_to_point(children1_bin)
+        children2 = bin_to_point(children2_bin)
+
+        if math.isnan(children1[0]) or math.isnan(children1[1]) or math.isnan(children2[0]) or math.isnan(children2[1]):
+            continue
+
+        return children1, children2
+
 def two_points_cross(parent1: Point, parent2: Point):
     parent1_bin = point_to_bin(parent1)
     parent2_bin = point_to_bin(parent2)
 
-    a, b = sorted(random.sample(range(1, len(parent1_bin) - 1), 2))
+    while(True):
+        a, b = sorted(random.sample(range(1, len(parent1_bin) - 1), 2))
 
-    children1_bin = parent1_bin[:a] + parent2_bin[a:b] + parent1_bin[b:]
-    children2_bin = parent2_bin[:a] + parent1_bin[a:b] + parent2_bin[b:]
+        children1_bin = parent1_bin[:a] + parent2_bin[a:b] + parent1_bin[b:]
+        children2_bin = parent2_bin[:a] + parent1_bin[a:b] + parent2_bin[b:]
 
-    children1 = bin_to_point(children1_bin)
-    children2 = bin_to_point(children2_bin)
+        children1 = bin_to_point(children1_bin)
+        children2 = bin_to_point(children2_bin)
 
-    return children1, children2
+        if math.isnan(children1[0]) or math.isnan(children1[1]) or math.isnan(children2[0]) or math.isnan(children2[1]):
+            continue
+
+        return children1, children2
+
+def homogeneous_cross(parent1: Point, parent2: Point, crossover_rate):
+    parent1_bin = point_to_bin(parent1)
+    parent2_bin = point_to_bin(parent2)
+
+    while(True):
+        parent1_bin = list(parent1_bin)
+        parent2_bin = list(parent2_bin)
+
+        for i in range(len(parent1_bin)):
+            if np.random.rand() < crossover_rate:
+                bit = parent1_bin[i]
+                parent1_bin[i] = parent2_bin[i]
+                parent2_bin[i] = bit
+        
+        parent1_bin = "".join(parent1_bin)
+        parent2_bin = "".join(parent2_bin)
+        
+        children1 = bin_to_point(parent1_bin)
+        children2 = bin_to_point(parent1_bin)
+
+        if math.isnan(children1[0]) or math.isnan(children1[1]) or math.isnan(children2[0]) or math.isnan(children2[1]):
+            continue
+
+        return children1, children2
+
+def grain_cross(parent1, parent2):
+
+    while(True):
+        parent1_bin = list(point_to_bin(parent1))
+        parent2_bin = list(point_to_bin(parent2))
+
+        for i in range(len(parent1_bin)):
+            if np.random.rand() >= 0.5:
+                parent1_bin[i] = parent2_bin[i]
+            
+        parent1_bin = "".join(parent1_bin)
+        children1 = bin_to_point(parent1_bin)
+
+        if math.isnan(children1[0]) or math.isnan(children1[1]):
+            continue
+        
+        return children1
+
+def negate_bit(bit: str):
+    if bit == '0':
+        return '1'
+    else:
+        return '0'
+    
+def edge_mutation(point: Point):
+    point_bin = list(point_to_bin(point))
+
+    if np.random.rand() < 0.5:
+        point_bin[0] = negate_bit(point_bin[0])
+    else:
+        point_bin[-1] = negate_bit(point_bin[-1])
+    
+    point_bin = "".join(point_bin)
+
+    mutated = bin_to_point(point_bin)
+
+    return mutated
+
+def point_mutation(point: Point):
+    while(True):
+        point_bin = list(point_to_bin(point))
+        a = random.sample(range(len(point_bin)), 1)[0]
+        point_bin[a] = negate_bit(point_bin[a])
+        point_bin = "".join(point_bin)
+        mutated = bin_to_point(point_bin)
+
+        if math.isnan(mutated[0]) or math.isnan(mutated[1]):
+            continue
+
+        return mutated
+
+def two_points_mutation(point: Point):
+    while(True):
+        point_bin = list(point_to_bin(point))
+        a, b = random.sample(range(len(point_bin)), 2)
+        point_bin[a] = negate_bit(point_bin[a])
+        point_bin[b] = negate_bit(point_bin[b])
+        point_bin = "".join(point_bin)
+        mutated = bin_to_point(point_bin)
+
+        if math.isnan(mutated[0]) or math.isnan(mutated[1]):
+            continue
+
+        return mutated
+    
+def inversion_mutation(point: Point):
+    point_bin = point_to_bin(point)
+    while(True):
+        a, b = sorted(random.sample(range(len(point_bin)), 2))
+        point_bin = point_bin[:a] + point_bin[a:b][::-1] + point_bin[b:]
+        mutated = bin_to_point(point_bin)
+
+        if math.isnan(mutated[0]) or math.isnan(mutated[1]):
+            continue
+
+        return mutated
 
 def initialize_population(pop_size: int, x_bounds: Point = Bounds, y_bounds: Point = Bounds) -> Population:
     """
@@ -108,47 +232,64 @@ def crossover(parent1: Point, parent2: Point, crossover_rate: float = 0.9, metho
     You could also do two-point or uniform crossover.
     """
     
-    if np.random.rand() < crossover_rate:
-        if method == str(CrossMethodBox.ONEPOINT):
-        # Example: crossover on x or y with 50% probability
-            if np.random.rand() < 0.5:
-                # Swap x
-                child1 = (parent2[0], parent1[1])
-                child2 = (parent1[0], parent2[1])
+    if method == str(CrossMethodBox.ONEPOINT):
+        if np.random.rand() < crossover_rate:
+    # Example: crossover on x or y with 50% probability
+            child1, child2 = one_point_cross(parent1, parent2)
 
-            else:
-                # Swap y
-                child1 = (parent1[0], parent2[1])
-                child2 = (parent2[0], parent1[1])
             return child1, child2
-        
-        elif method == str(CrossMethodBox.TWOPOINTS):
-            print(parent1, parent2)
-            child1, child2 = two_points_cross(parent1, parent2)
-            print(child1, child2)
-            return child1, child2
-    else:
+        else:
         # No crossover -> just copy parents
-        return parent1, parent2
+            return parent1, parent2
+        
+    elif method == str(CrossMethodBox.TWOPOINTS):
+        if np.random.rand() < crossover_rate:
+            child1, child2 = two_points_cross(parent1, parent2)
+
+            return child1, child2
+        else:
+            return parent1, parent2
+    elif method == str(CrossMethodBox.HOMOGENEOUS):
+          child1, child2 = homogeneous_cross(parent1, parent2, crossover_rate)
+
+          return child1, child2
+    elif method == str(CrossMethodBox.GRAIN):
+        if np.random.rand() < crossover_rate:
+            child1 = grain_cross(parent1, parent2)
+
+            return child1
+        else:
+            return parent1
 
 
 def mutate(
         individual: Point,
-        mutation_rate: float = 0.1,
-        x_bounds: Point = Bounds,
-        y_bounds: Point = Bounds
+        method,
+        mutation_rate: float = 0.1
 ) -> Point:
     """
     Mutate one of the genes (x or y) with some probability.
     """
-    x, y = individual
     if np.random.rand() < mutation_rate:
-        # Decide whether to mutate x or y
-        if np.random.rand() < 0.5:
-            x = np.random.uniform(*x_bounds)
-        else:
-            y = np.random.uniform(*y_bounds)
-    return x, y
+        if (method == str(MutationMethodBox.EDGE)):
+            x, y = edge_mutation(individual)
+            return x, y
+        
+        elif (method == str(MutationMethodBox.ONEPOINT)):
+            x, y = point_mutation(individual)
+            return x, y
+        
+        elif (method == str(MutationMethodBox.TWOPOINTS)):
+            x, y = two_points_mutation(individual)
+            return x, y
+        elif (method == str(MutationMethodBox.INVERSION)):
+            x, y = inversion_mutation(individual)
+            return x, y
+    else:
+        x, y = individual
+
+        return x, y
+       
 
 
 # def run(
