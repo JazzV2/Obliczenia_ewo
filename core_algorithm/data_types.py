@@ -39,6 +39,11 @@ class CrossMethodBox(StreamlitEnum):
     TWOPOINTS = 'Two points'
     HOMOGENEOUS = 'Homogeneous'
     GRAIN = 'Grain'
+    ARTHMETIC = 'Arthmetic'
+    TYPEALPHAMIX = 'Type alpha mix'
+    TYPEALPHABETAMIX = 'Type alpha and beta mix'
+    AVERAGE = 'Average'
+    LINEAR = 'Linear'
 
 
 @unique
@@ -47,3 +52,5 @@ class MutationMethodBox(StreamlitEnum):
     ONEPOINT = 'One point'
     TWOPOINTS = 'Two points'
     INVERSION = 'Inversion'
+    ISOSCELES = 'Isosceles'
+    GAUSSIAN = 'Gaussian'

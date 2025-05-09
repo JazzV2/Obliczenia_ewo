@@ -174,9 +174,83 @@ def _grain_cross(parent1, parent2):
             continue
         
         return children1
+    
+def _arthmetic_cross(parent1, parent2):
+    alpha = np.random.rand()
+    if alpha == 0:
+        alpha += 1e-10
 
+    child1 = ((alpha * parent1[0] + (1 - alpha) * parent2[0]), (alpha * parent1[1] + (1 - alpha) * parent2[1]))
+    child2 = ((alpha * parent2[0] + (1 - alpha) * parent1[0]), (alpha * parent2[1] + (1 - alpha) * parent1[1]))
 
-def crossover(parent1: Point, parent2: Point, crossover_rate: float, method: CrossMethodBox) -> Tuple[Point, Point]:
+    return child1, child2
+
+def _type_alpha_cross(parent1, parent2, alpha):
+    d1 = abs(parent1[0] - parent2[0])
+    d2 = abs(parent1[1] - parent2[1])
+
+    min_x = min([parent1[0], parent2[0]]) - alpha * d1
+    max_x = max([parent1[0], parent2[0]]) + alpha * d1
+    min_y = min([parent1[1], parent2[1]]) - alpha * d2
+    max_y = max([parent1[1], parent2[1]]) + alpha * d2
+
+    x1_new = np.random.uniform(min_x, max_x)
+    x2_new = np.random.uniform(min_x, max_x)
+    y1_new = np.random.uniform(min_y, max_y)
+    y2_new = np.random.uniform(min_y, max_y)
+
+    child1 = (x1_new, y1_new)
+    child2 = (x2_new, y2_new)
+
+    return child1, child2
+
+def _type_alpha_and_beta_cross(parent1, parent2, alpha, beta):
+    d1 = abs(parent1[0] - parent2[0])
+    d2 = abs(parent1[1] - parent2[1])
+
+    min_x = min([parent1[0], parent2[0]]) - alpha * d1
+    max_x = max([parent1[0], parent2[0]]) + beta * d1
+    min_y = min([parent1[1], parent2[1]]) - alpha * d2
+    max_y = max([parent1[1], parent2[1]]) + beta * d2
+
+    x1_new = np.random.uniform(min_x, max_x)
+    x2_new = np.random.uniform(min_x, max_x)
+    y1_new = np.random.uniform(min_y, max_y)
+    y2_new = np.random.uniform(min_y, max_y)
+
+    child1 = (x1_new, y1_new)
+    child2 = (x2_new, y2_new)
+
+    return child1, child2
+
+def _average_cross(parent1, parent2):
+    x_new = (parent1[0] + parent2[0]) / 2
+    y_new = (parent1[1] + parent2[1]) / 2
+
+    child = (x_new, y_new)
+
+    return child
+
+def _linear_cross(parent1, parent2, func):
+    child_z = (0.5*(parent1[0] + parent2[0]), 0.5*(parent1[1] + parent2[1]))
+    child_v = ((1.5*parent1[0]) - (0.5*parent2[0]), (1.5*parent1[1] - 0.5*parent2[1]))
+    child_w = ((-0.5*parent1[0]) + (1.5*parent2[0]), (-0.5*parent1[1]) + (1.5*parent2[1]))
+    children = [child_z, child_v, child_w] 
+
+    score_z = fitness(func, child_z)
+    score_v = fitness(func, child_v)
+    score_w = fitness(func, child_w)
+    scores = [score_z, score_v, score_w]
+
+    scored_children = list(zip(children, scores))
+    scored_children.sort(key=lambda scored_children: scored_children[1], reverse=True)
+
+    child1 = scored_children[0][0]
+    child2 = scored_children[1][0]
+
+    return child1, child2
+
+def crossover(parent1: Point, parent2: Point, crossover_rate: float, method: CrossMethodBox, alpha: float, beta: float, func):
     """
     Single-point crossover on 2D chromosome (x,y).
     You could also do two-point or uniform crossover.
@@ -205,10 +279,45 @@ def crossover(parent1: Point, parent2: Point, crossover_rate: float, method: Cro
     elif method == CrossMethodBox.GRAIN:
         if np.random.rand() < crossover_rate:
             child1 = _grain_cross(parent1, parent2)
+           
+            return child1
+        else:
+            return parent1
+    elif method == CrossMethodBox.ARTHMETIC:
+        if np.random.rand() < crossover_rate:
+            child1, child2 = _arthmetic_cross(parent1, parent2)
+
+            return child1, child2
+        else:
+            return parent1, parent2
+    elif method == CrossMethodBox.TYPEALPHAMIX:
+        if np.random.rand() < crossover_rate:
+            child1, child2 = _type_alpha_cross(parent1, parent2, alpha)
+
+            return child1, child2
+        else:
+            return parent1, parent2
+    elif method == CrossMethodBox.TYPEALPHABETAMIX:
+        if np.random.rand() < crossover_rate:
+            child1, child2 = _type_alpha_and_beta_cross(parent1, parent2, alpha, beta)
+
+            return child1, child2
+        else:
+            return parent1, parent2
+    elif method == CrossMethodBox.AVERAGE:
+        if np.random.rand() < crossover_rate:
+            child1 = _average_cross(parent1, parent2)
 
             return child1
         else:
             return parent1
+    elif method == CrossMethodBox.LINEAR:
+        if np.random.rand() < crossover_rate:
+            child1, child2 = _linear_cross(parent1, parent2, func)
+
+            return child1, child2
+        else:
+            return parent1, parent2
     else:
         raise ValueError(f"Unknown crossover method: {method}")
         
@@ -266,11 +375,41 @@ def _inversion_mutation(point: Point):
 
         return mutated
 
+def _isosceles_mutation(point: Point, minimum: float, maximum: float):
+    index = random.choice([0, 1])
+
+    x, y = point
+    new_value = np.random.uniform(minimum, maximum)
+
+    if index == 0:
+        x = new_value
+    else:
+        y = new_value
+
+    mutated = (x, y)
+
+    return mutated
+
+def _gaussian_mutation(point: Point, loc: float, scale: float):
+    x, y = point
+    mutation_x = np.random.normal(loc=loc, scale=scale)
+    mutation_y = np.random.normal(loc=loc, scale=scale)
+
+    x += mutation_x
+    y += mutation_y
+
+    mutated = (x, y)
+
+    return mutated
 
 def mutate(
         individual: Point,
         method: MutationMethodBox,
-        mutation_rate: float = 0.1
+        mutation_rate: float,
+        minimum: float,
+        maximum: float,
+        loc: float,
+        scale: float
 ) -> Point:
     """
     Mutate one of the genes (x or y) with some probability.
@@ -288,6 +427,12 @@ def mutate(
         elif method == MutationMethodBox.INVERSION:
             x, y = _inversion_mutation(individual)
         
+        elif method == MutationMethodBox.ISOSCELES:
+            x, y = _isosceles_mutation(individual, minimum, maximum)
+
+        elif method == MutationMethodBox.GAUSSIAN:
+            x, y = _gaussian_mutation(individual, loc, scale)
+            
         else:
             raise ValueError(f"Unknown mutation method: {method}")
         

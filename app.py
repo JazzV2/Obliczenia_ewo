@@ -24,11 +24,23 @@ def main() -> None:
         selection_method = st.selectbox("Selection Method", ca.SelectionBox.values())
         crossover_method = st.selectbox("Crossover Method", ca.CrossMethodBox.values())
         crossover_rate = st.slider("Crossover Rate", min_value=0.0, max_value=1.0, value=0.9, step=0.05)
+        alpha_cross_var = st.slider("Alpha value for crossover method", min_value=0.0, max_value=1.0, value=0.25, step=0.05, disabled=not (crossover_method == ca.CrossMethodBox.TYPEALPHAMIX or crossover_method == ca.CrossMethodBox.TYPEALPHABETAMIX))
+        beta_cross_var = st.slider("Beta value for crossover method", min_value=0.0, max_value=1.0, value=0.25, step=0.05, disabled=(crossover_method != ca.CrossMethodBox.TYPEALPHABETAMIX))
         mutation_method = st.selectbox("Mutation Method", ca.MutationMethodBox.values())
         mutation_rate = st.slider("Mutation Rate", min_value=0.0, max_value=1.0, value=0.1, step=0.05)
+        min_mutation = st.number_input("Min value for isosceles mutation", value=-10.0, disabled=(mutation_method != ca.MutationMethodBox.ISOSCELES))
+        max_mutation = st.number_input("Max value for isosceles mutation", value=10.0, disabled=(mutation_method != ca.MutationMethodBox.ISOSCELES))
+        loc = st.number_input("Mean value for gausian mutation", value=10, disabled=(mutation_method != ca.MutationMethodBox.GAUSSIAN))
+        scale = st.number_input("Standard deviation for gausian mutation", value=1, disabled=(mutation_method != ca.MutationMethodBox.GAUSSIAN))
 
         # button to run the GA
-        run_button = st.button("Run")
+        run_button = st.button("Run", disabled=((min_mutation >= max_mutation) and (mutation_method == ca.MutationMethodBox.ISOSCELES)) or ((scale < 0) and (mutation_method == ca.MutationMethodBox.GAUSSIAN)))
+
+        if min_mutation >= max_mutation and mutation_method == ca.MutationMethodBox.ISOSCELES:
+            st.warning("Min value should be less than max value. Please correct the values.")
+
+        if scale < 0 and mutation_method == ca.MutationMethodBox.GAUSSIAN:
+            st.warning("Standard deviation can't be less than 0")
     
     
     match selected_func_type:
@@ -66,16 +78,15 @@ def main() -> None:
             while len(new_population) < pop_size:
                 parent1 = ca.selection(population, scores, method=selection_method)
                 parent2 = ca.selection(population, scores, method=selection_method)
-                cross_result = ca.crossover(parent1, parent2, crossover_rate, crossover_method)
-                
-                if crossover_method == ca.CrossMethodBox.GRAIN:
+                cross_result = ca.crossover(parent1, parent2, crossover_rate, crossover_method, alpha_cross_var, beta_cross_var, func)
+                if crossover_method == ca.CrossMethodBox.GRAIN or crossover_method == ca.CrossMethodBox.AVERAGE:
                     child1 = cross_result
-                    child1 = ca.mutate(child1, mutation_method, mutation_rate)
+                    child1 = ca.mutate(child1, mutation_method, mutation_rate, min_mutation, max_mutation, loc, scale)
                     new_population.extend([child1])
                 else:
                     child1, child2 = cross_result
-                    child1 = ca.mutate(child1, mutation_method, mutation_rate)
-                    child2 = ca.mutate(child2, mutation_method, mutation_rate)
+                    child1 = ca.mutate(child1, mutation_method, mutation_rate, min_mutation, max_mutation, loc, scale)
+                    child2 = ca.mutate(child2, mutation_method, mutation_rate, min_mutation, max_mutation, loc, scale)
                     new_population.extend([child1, child2])
 
             population = new_population[:pop_size]
